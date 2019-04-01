@@ -7,15 +7,26 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type Helper struct{
+type SqlHelper struct{
 	Connection *sql.DB
+}
+
+
+func MysqlOpen(connectionStr string) (*SqlHelper,error){
+
+	sqlHelper :=new (SqlHelper)
+	err:= sqlHelper.Open(connectionStr)
+	if(err!=nil){
+		return nil ,err
+	}
+	return sqlHelper,nil
 }
 
 
 /**
    初始化模块
 */
-func (this *Helper) Open(connectionStr string) error{
+func (this *SqlHelper) Open(connectionStr string) error{
 	
 	var err error
 	
@@ -31,14 +42,14 @@ func (this *Helper) Open(connectionStr string) error{
 /**
 初始化
 */
-func (this *Helper) SetDB (conn *sql.DB) {
+func (this *SqlHelper) SetDB (conn *sql.DB) {
 		this.Connection=conn
 }
 
 /**
   读取多行
 */
-func (this *Helper) QueryRows(sql string, args ...interface{})(*[]HelperRow, error) {
+func (this *SqlHelper) QueryRows(sql string, args ...interface{})(*[]HelperRow, error) {
 	
 	rows,err := this.Connection.Query(sql,args...)
 		
@@ -82,7 +93,7 @@ func (this *Helper) QueryRows(sql string, args ...interface{})(*[]HelperRow, err
 /**
   读取一行
 */
-func (this *Helper) QueryRow(sql string, args ...interface{})(*HelperRow, error) {
+func (this *SqlHelper) QueryRow(sql string, args ...interface{})(*HelperRow, error) {
 	
 	rows,err := this.Connection.Query(sql,args...)
 		
@@ -125,7 +136,7 @@ func (this *Helper) QueryRow(sql string, args ...interface{})(*HelperRow, error)
 /**
   读取个值
 */
-func (this *Helper) QueryScalarInt(sql string, args ...interface{})(int, error) {
+func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error) {
 	
 	rows,err := this.Connection.Query(sql,args...)
 	if(err!=nil){
@@ -146,7 +157,7 @@ func (this *Helper) QueryScalarInt(sql string, args ...interface{})(int, error) 
 /*
 执行sql
 */
-func (this *Helper) Exec(sql string,args ...interface{})(sql.Result,error){
+func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
 	stmt,err:=this.Connection.Prepare(sql)
 	if(err!=nil){
 		return nil,err
@@ -162,7 +173,7 @@ func (this *Helper) Exec(sql string,args ...interface{})(sql.Result,error){
 /*
 执行插入sql
 */
-func (this *Helper) Insert(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
 	if(err!=nil){
 		return 0,err
@@ -177,7 +188,7 @@ func (this *Helper) Insert(sql string, args ...interface{})(int64,error){
 /*
 更新或删除sql
 */
-func (this *Helper) UpdateOrDel(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
 	if(err!=nil){
 		return 0,err
@@ -194,7 +205,7 @@ func (this *Helper) UpdateOrDel(sql string, args ...interface{})(int64,error){
 /*
     关闭连接
 */
-func (this *Helper) Close() error{
+func (this *SqlHelper) Close() error{
 	err := this.Connection.Close()
 	return err
 }
