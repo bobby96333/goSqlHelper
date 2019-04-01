@@ -47,6 +47,22 @@ func (this *HelperRow) String(key string) string{
 	
 }
 
+
+func (this *HelperRow) PInt(key string) int{
+	val,err:=this.Int(key)
+	if(err!=nil){
+		panic(err)
+	}
+	return val
+}
+func (this *HelperRow) PInt64(key string) int64{
+	val,err:=this.Int64(key)
+	if(err!=nil){
+		panic(err)
+	}
+	return val
+}
+
 /**
 	int获取key
 */
