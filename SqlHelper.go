@@ -89,6 +89,22 @@ func (this *SqlHelper) QueryRows(sql string, args ...interface{})(*[]HelperRow, 
 	return &ret,nil
 }
 
+/**
+get Querying handler
+ */
+func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
+
+	rows,err := this.Connection.Query(sql,args...)
+	if(err!=nil){
+		return nil,err
+	}
+	querying,err:= NewQuerying(rows)
+	if err!=nil {
+		return nil ,err
+	}
+	return querying,nil
+}
+
 
 /**
   读取一行
