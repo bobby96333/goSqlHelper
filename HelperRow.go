@@ -2,12 +2,21 @@ package goSqlHelper
 
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"errors"
 )
 
 type HelperRow map[string] interface{}
+
+func (this *HelperRow) ToJson() string{
+	bs,err := json.Marshal(&this)
+	if err!=nil {
+		panic(err)
+	}
+	return string(bs)
+}
 
 /**
 	字段串获取key
