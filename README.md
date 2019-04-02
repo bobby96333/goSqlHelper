@@ -42,7 +42,6 @@ if col1,err:=row.Int64("col1");err!=nil {
 Query a row data
 
 ```go
-
 package main
 
 import (
@@ -51,24 +50,15 @@ import (
 )
 
 func main(){
-
+	fmt.Println("hello")
 	conn,err :=goSqlHelper.MysqlOpen("user:password@tcp(127.0.0.1:3306)/dbname")
 	checkErr(err)
 	row,err := conn.QueryRow("select * from table where col1 = ? and  col2 = ?","123","abc")
-	errCheck(err)
+	checkErr(err)
 	if *row==nil {
 		fmt.Println("no found row")
 	}else{
-		fmt.Printf("query result：\n %s \n",row.ToJson())
-		fmt.Println("get string:",row.String("col2"))
-    
-                //query a number
-		fmt.Println("get Int:",row.PInt("col1"))
-		//or
-		if col1,err:=row.Int("col1");err!=nil {
-			fmt.Println("query col 1 :",col1)
-		}
-    
+		fmt.Printf("%+v",row)
 	}
 }
 
@@ -79,6 +69,11 @@ func checkErr(err error){
 }
 
 ```
+output:
+```text
+&map[col1:abc col2:123]
+```
+
 Query multi-row data
 ```go
   rows,err := conn.QueryRows("select * from table where col1 = ? and  col2 = ?","123","abc")
