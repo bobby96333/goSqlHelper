@@ -12,6 +12,31 @@ or
 go get github.com/bobby96333/GoShellHelper
 ```
 
+Easy to use query result,HelperRow is a map[string]interface{} struct
+```go
+type HelperRow map[string] interface{}
+```
+use it
+```go
+fmt.println(row.ToJson())
+fmt.Println("get string:",row.String("col2"))
+    
+//query a integer
+fmt.Println("get Int:",row.PInt("col1"))
+//or
+if col1,err:=row.Int("col1");err!=nil {
+    fmt.Println("query col 1 :",col1)
+}
+
+//query a long
+fmt.Println("get Int:",row.PInt64("col1"))
+//or
+if col1,err:=row.Int64("col1");err!=nil {
+    fmt.Println("query col 1 :",col1)
+}
+
+```
+
 ## Demo
 
 Query a row data
@@ -37,7 +62,7 @@ func main(){
 		fmt.Printf("query result：\n %s \n",row.ToJson())
 		fmt.Println("get string:",row.String("col2"))
     
-    //query a number
+                //query a number
 		fmt.Println("get Int:",row.PInt("col1"))
 		//or
 		if col1,err:=row.Int("col1");err!=nil {
