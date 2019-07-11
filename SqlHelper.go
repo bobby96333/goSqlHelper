@@ -35,6 +35,10 @@ func (this *SqlHelper) Open(connectionStr string) error{
 	if(err!=nil){
 		return errors.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
 	}
+	err=this.Connection.Ping();
+	if err!=nil {
+		return err
+	}
 	
 	return nil
 }
