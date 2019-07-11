@@ -147,7 +147,7 @@ func (this *SqlHelper) QueryRow(sql string, args ...interface{})(*HelperRow, err
 		return &record,nil
 	}
 
-	return nil,errors.New(fmt.Sprintf("no found row:%s",sql))
+	return nil,nil
 }
 /**
   读取个值
