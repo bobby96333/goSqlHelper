@@ -57,6 +57,16 @@ func (this *HelperRow) PString(key string) *string{
 	}
 	return str
 }
+func (this *HelperRow) CleverString(key string) string{
+	str,err:=this.String(key)
+	if err!=nil {
+		panic(err)
+	}
+	if str==nil {
+		return ""
+	}
+	return *str
+}
 
 
 func (this *HelperRow) PInt(key string) *int{
@@ -128,6 +138,7 @@ func (this *HelperRow) Int64(key string) (val *int64,err error){
 	}
 	return &ret,err
 }
+
 
 
 
