@@ -1,12 +1,10 @@
 package goSqlHelper
 
-
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"reflect"
 	"strconv"
-	"errors"
 )
 
 type HelperRow map[string] interface{}
@@ -45,7 +43,7 @@ func (this *HelperRow) String(key string) (*string,error){
 		return nil,errors.New("don't konw type:"+reflect.TypeOf(obj).Name())
 	}
 
-	str = fmt.Sprintf("%V",obj)
+	//str = fmt.Sprintf("%V",obj)
 	return &str,nil
 }
 
