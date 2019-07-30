@@ -13,7 +13,11 @@ func (this *Querying) Close(){
 	this.cols=nil
 }
 
-func (this *Querying) QueryRow() (*HelperRow,error){
+func (this Querying) Columns() []string{
+	return this.cols
+}
+
+func (this Querying) QueryRow() (HelperRow,error){
 
 	scanArgs := make([]interface{}, len(this.cols))
 	values := make([]interface{}, len(this.cols))
@@ -42,7 +46,7 @@ func (this *Querying) QueryRow() (*HelperRow,error){
 			}
 		}
 
-		return &record,nil
+		return record,nil
 	}
 
 	return nil,nil

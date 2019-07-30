@@ -9,7 +9,7 @@ import (
 
 type HelperRow map[string] interface{}
 
-func (this *HelperRow) ToJson() string{
+func (this HelperRow) ToJson() string{
 	bs,err := json.Marshal(&this)
 	if err!=nil {
 		panic(err)
@@ -19,9 +19,9 @@ func (this *HelperRow) ToJson() string{
 /**
 字段串获取key
 */
-func (this *HelperRow) String(key string) (*string,error){
+func (this HelperRow) String(key string) (*string,error){
 	var obj interface{}
-	obj = (*this)[key]
+	obj = (this)[key]
 	if obj== nil {
 		return nil,nil
 	}
@@ -48,14 +48,14 @@ func (this *HelperRow) String(key string) (*string,error){
 }
 
 
-func (this *HelperRow) PString(key string) *string{
+func (this HelperRow) PString(key string) *string{
 	str,err:=this.String(key)
 	if err!=nil {
 		panic(err)
 	}
 	return str
 }
-func (this *HelperRow) CleverString(key string) string{
+func (this HelperRow) CleverString(key string) string{
 	str,err:=this.String(key)
 	if err!=nil {
 		panic(err)
@@ -67,14 +67,14 @@ func (this *HelperRow) CleverString(key string) string{
 }
 
 
-func (this *HelperRow) PInt(key string) *int{
+func (this HelperRow) PInt(key string) *int{
 	val,err:=this.Int(key)
 	if(err!=nil){
 		panic(err)
 	}
 	return val
 }
-func (this *HelperRow) PInt64(key string) *int64{
+func (this HelperRow) PInt64(key string) *int64{
 	val,err:=this.Int64(key)
 	if(err!=nil){
 		panic(err)
@@ -85,9 +85,9 @@ func (this *HelperRow) PInt64(key string) *int64{
 /**
 	int获取key
 */
-func (this *HelperRow) Int(key string) (val *int,err error){
+func (this HelperRow) Int(key string) (val *int,err error){
 	var obj interface{}
-	obj = (*this)[key]
+	obj = this[key]
 
 	if obj== nil {
 		return nil,nil
@@ -113,9 +113,9 @@ func (this *HelperRow) Int(key string) (val *int,err error){
 /**
 	int64获取key
 */
-func (this *HelperRow) Int64(key string) (val *int64,err error){
+func (this HelperRow) Int64(key string) (val *int64,err error){
 	var obj interface{}
-	obj = (*this)[key]
+	obj = this[key]
 
 	if obj== nil {
 		return nil,nil
