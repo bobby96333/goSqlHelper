@@ -61,7 +61,7 @@ func (this *SqlHelper) SetDB (conn *sql.DB) {
 */
 func (this SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, error) {
 
-	var rows =make([]HelperRow,0,QUERY_BUFFER_SIZE)
+	var rows =make([]HelperRow, 0, QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
 	if err!=nil {
 		return nil, err
