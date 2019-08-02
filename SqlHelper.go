@@ -1,6 +1,7 @@
 package goSqlHelper
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,11 +10,23 @@ import (
 
 type SqlHelper struct{
 	Connection *sql.DB
+	context context.Context
+	tx *sql.Tx
 }
 
 const QUERY_BUFFER_SIZE=20
 
+/**
+@todo no sql
 
+	var obj=new(tb1)
+	con.Insert(obj)
+	obj.setup(conn)
+	obj.Select("id,val").Where("id=2").QueryList()
+	obj.Select("id,val").Where("id=2").QueryInt()
+	sqlHelper.Select("id,val").Where("id=2").QueryList()
+
+*/
 func MysqlOpen(connectionStr string) (*SqlHelper,error){
 
 	sqlHelper :=new (SqlHelper)
@@ -29,20 +42,40 @@ func New(connectionStr string) (*SqlHelper,error){
 }
 
 /**
-@todo need add context,Transaction support
-begin transaction
- */
-func (this *SqlHelper) Begin()(*sql.Tx,error){
-	val, err:= this.Connection.Begin()
-	if err!=nil {
-		return nil, err
-	}
-	return val,nil
+begin context
+*/
+func (this *SqlHelper) BeginContext(ctx context.Context) *SqlHelperRunner{
+	runner :=new(SqlHelperRunner)
+	runner.SetDB(this.Connection)
+	runner.SetContext(ctx)
+	return runner
 }
 
+/**
+begin a trasnaction
+*/
+func (this *SqlHelper) Begin() *SqlHelperRunner{
+	runner :=new(SqlHelperRunner)
+	runner.SetDB(this.Connection)
+	runner.Begin()
+	return runner
+}
 
 /**
-   初始化模块
+begin a trasnaction
+*/
+func (this *SqlHelper) BeginTx(ctx context.Context, opts *sql.TxOptions) (*SqlHelperRunner,error) {
+	runner :=new(SqlHelperRunner)
+	runner.SetDB(this.Connection)
+	err:= runner.BeginTx(ctx,opts)
+	if err!=nil {
+		return nil,err
+	}
+	return runner,nil
+}
+
+/**
+   open db
 */
 func (this *SqlHelper) Open(connectionStr string) error{
 	var err error
@@ -60,14 +93,14 @@ func (this *SqlHelper) Open(connectionStr string) error{
 }
 
 /**
-初始化
+set db object
 */
 func (this *SqlHelper) SetDB (conn *sql.DB) {
 		this.Connection=conn
 }
 
 /**
-  读取多行
+  query muliti rows
 */
 func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, error) {
 
@@ -93,7 +126,7 @@ func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, e
 }
 
 /**
-  读取多行
+  read a table rows
 */
 func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, error) {
 
@@ -121,13 +154,12 @@ func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable,
 	return NewTable(rows,cols),nil
 }
 
-
 /**
 get Querying handler
- */
+*/
 func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
 
-	rows,err := this.Connection.Query(sql,args...)
+	var rows ,err = this.query(sql,args...)
 	if err!=nil {
 		return nil, err
 	}
@@ -135,17 +167,16 @@ func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error)
 	return querying,nil
 }
 
-
 /**
-  读取一行
+  read a record row
 */
 func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, error) {
 
 	query,err:= this.Querying(sql,args...)
-	defer query.Close()
 	if err!=nil {
 		return nil, err
 	}
+	defer query.Close()
 	row,err:= query.QueryRow();
 	if err!=nil {
 		return nil ,err
@@ -156,13 +187,12 @@ func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, erro
 	return row,nil
 }
 /**
-  读取个值
+  read a int value
 */
 func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error) {
-	
-	rows,err := this.Connection.Query(sql,args...)
-	if(err!=nil){
-		return 0, err
+	var rows ,err = this.query(sql,args...)
+	if err!=nil {
+		return 0,err
 	}
 	defer rows.Close()
 	if rows.Next() {
@@ -170,16 +200,40 @@ func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, erro
 		err = rows.Scan(&val)
 		return val,nil
 	}
+	return 0, NoFoundError
+}
+/**
+  orm read data
+*/
+func (this *SqlHelper) QueryOrm(orm IOrm, sql string, args ...interface{})(error) {
 
-	return 0, errors.New("no found record.")
+
+	rows,err := this.query(sql,args...)
+	if(err!=nil){
+		return err
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return  NoFoundError
+	}
+	cols,err:=rows.Columns()
+	if err!=nil {
+		return err
+	}
+	points := orm.MapFields(cols)
+	err = rows.Scan(points...)
+	if err!=nil {
+		return err
+	}
+	return nil
 }
 
 
 /*
-执行sql
+execute sql
 */
 func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
-	stmt,err:=this.Connection.Prepare(sql)
+	stmt,err:=this.prepare(sql)
 	if err!=nil {
 		return nil, err
 	}
@@ -192,7 +246,7 @@ func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
 }
 
 /*
-执行插入sql
+execute insert sql
 */
 func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
@@ -207,7 +261,7 @@ func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,error){
 	return id , nil
 }
 /*
-更新或删除sql
+execute update or delete sql
 */
 func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
@@ -224,9 +278,14 @@ func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error)
 
 
 /*
-    关闭连接
+    close db pool
 */
 func (this *SqlHelper) Close() error{
 	err := this.Connection.Close()
 	return err
+}
+
+// get auto sql
+func(this *SqlHelper) Auto() *AutoSql{
+	return NewAutoSql(this)
 }

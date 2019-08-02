@@ -13,6 +13,7 @@ func TestMysqlOpen(t *testing.T) {
 		panic(err)
 	}
 
+
 	time1:=time.Now()
 	for i:=0;i<1000;i++{
 		testTable(con)
@@ -43,7 +44,7 @@ func testObj(con *SqlHelper){
 
 }
 
-
+//tbname: tb_tb1
 type tb1 struct{
 	id int
 	val string
