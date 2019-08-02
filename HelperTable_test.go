@@ -33,6 +33,8 @@ func m2(val *Tt){
 
 func TestTt(t *testing.T){
 
+
+
 	tval1:=Tt{
 		Str:"xxxxxxxxsdfsdfsfdfxxxxxxxxsdfsdfsfdfxxxxxxxxsdfsdfsfdfxxxxxxxxsdfsdfsfdf",
 		val:88,

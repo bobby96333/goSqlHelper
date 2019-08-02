@@ -1,6 +1,9 @@
 package goSqlHelper
 
-import "database/sql"
+import (
+	"database/sql"
+	"github.com/bobby96333/goSqlHelper/HelperError"
+)
 
 type Querying struct {
 	rows *sql.Rows
@@ -13,11 +16,26 @@ func (this *Querying) Close(){
 	this.cols=nil
 }
 
-func (this Querying) Columns() []string{
-	return this.cols
+func (this *Querying) Columns() ([]string,HelperError.Error){
+	if this.cols==nil {
+		var err error
+		this.cols,err = this.rows.Columns()
+		if err!=nil {
+			return nil,HelperError.NewParent(err)
+		}
+	}
+	return this.cols,nil
 }
 
-func (this Querying) QueryRow() (HelperRow,error){
+func (this Querying) QueryObject(object interface{}) (HelperError.Error){
+	err := this.rows.Scan(object)
+	if err!=nil {
+		return HelperError.NewParent(err)
+	}
+	return nil
+}
+
+func (this Querying) QueryRow() (HelperRow,HelperError.Error){
 
 	scanArgs := make([]interface{}, len(this.cols))
 	values := make([]interface{}, len(this.cols))
@@ -29,7 +47,7 @@ func (this Querying) QueryRow() (HelperRow,error){
 
 		err := this.rows.Scan(scanArgs...)
 		if err!=nil {
-			return nil,err
+			return nil,HelperError.NewParent(err)
 		}
 		record := make(HelperRow)
 		for i, col := range values {
@@ -49,19 +67,13 @@ func (this Querying) QueryRow() (HelperRow,error){
 		return record,nil
 	}
 
-	return nil,nil
+	return nil,HelperError.New(HelperError.ErrorEmpty)
 
 }
 
 
-func NewQuerying(rows *sql.Rows) (*Querying,error){
-	var err error
+func NewQuerying(rows *sql.Rows) (*Querying){
 	querying:=new(Querying)
 	querying.rows=rows
-
-	querying.cols,err=rows.Columns()
-	if(err!=nil){
-		return nil,err
-	}
-	return querying,nil
+	return querying
 }

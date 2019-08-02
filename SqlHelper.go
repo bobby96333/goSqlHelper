@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"database/sql"
 	"errors"
+	"github.com/bobby96333/goSqlHelper/HelperError"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -14,38 +15,47 @@ type SqlHelper struct{
 const QUERY_BUFFER_SIZE=20
 
 
-func MysqlOpen(connectionStr string) (*SqlHelper,error){
+func MysqlOpen(connectionStr string) (*SqlHelper,HelperError.Error){
 
 	sqlHelper :=new (SqlHelper)
 	err:= sqlHelper.Open(connectionStr)
 	if(err!=nil){
-		return nil ,err
+		return nil ,HelperError.NewParent(err)
 	}
 	return sqlHelper,nil
 }
 
-func New(connectionStr string) (*SqlHelper,error){
+func New(connectionStr string) (*SqlHelper,HelperError.Error){
 	return MysqlOpen(connectionStr)
+}
+
+/**
+begin transaction
+ */
+func (this *SqlHelper) Begin()(*sql.Tx,HelperError.Error){
+	val, err:= this.Connection.Begin()
+	if err!=nil {
+		return nil, HelperError.NewParent(err)
+	}
+	return val,nil
 }
 
 
 /**
    初始化模块
 */
-func (this *SqlHelper) Open(connectionStr string) error{
-	
+func (this *SqlHelper) Open(connectionStr string) HelperError.Error{
 	var err error
 	
 //	sql.Open
 	this.Connection,err = sql.Open("mysql",connectionStr)
 	if(err!=nil){
-		return errors.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
+		return HelperError.NewString(fmt.Sprintf("数据库链接失败:%s",err.Error()))
 	}
 	err=this.Connection.Ping();
 	if err!=nil {
-		return err
+		return HelperError.NewParent(err)
 	}
-	
 	return nil
 }
 
@@ -59,7 +69,7 @@ func (this *SqlHelper) SetDB (conn *sql.DB) {
 /**
   读取多行
 */
-func (this SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, error) {
+func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, HelperError.Error) {
 
 	var rows =make([]HelperRow, 0, QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
@@ -69,58 +79,36 @@ func (this SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, er
 	defer query.Close()
 	for{
 		row,err:= query.QueryRow();
-		if err!=nil {
-			return nil ,err
+		if err==nil {
+			rows=append(rows,row)
+			continue
 		}
-		if row == nil {
+		if err.IsEmpty() {
 			break
 		}
-		rows=append(rows,row)
+		return nil , err
 	}
 
 	return rows,nil
 }
 
+func (this *SqlHelper) QueryObject(obj interface{}, sql string,args ...interface{})(HelperError.Error) {
+	query,err:= this.Querying(sql,args...)
+	if err!=nil {
+		return err
+	}
+	defer query.Close()
+	err = query.QueryObject(obj)
+	if err!=nil {
+		return err
+	}
+	return nil
+}
+
 /**
   读取多行
 */
-func (this SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, error) {
-	//
-	//queryRet,err := this.Connection.Query(sql,args...)
-	//
-	//if(err!=nil){
-	//	return nil,err
-	//}
-	//defer queryRet.Close()
-	//
-	//var rows =make([]HelperRow,0,QUERY_BUFFER_SIZE)
-	//
-	//columns, _ := queryRet.Columns()
-	//scanArgs := make([]interface{}, len(columns))
-	//values := make([]interface{}, len(columns))
-	//for i := range values {
-	//	scanArgs[i] = &values[i]
-	//}
-	//
-	//for queryRet.Next() {
-	//
-	//	err = queryRet.Scan(scanArgs...)
-	//	record := make(HelperRow)
-	//	for i, col := range values {
-	//		if col == nil {
-	//			continue
-	//		}
-	//		switch col.(type) {
-	//
-	//		case []byte:
-	//			record[columns[i]] = string(col.([]byte))
-	//		default:
-	//			record[columns[i]] = col
-	//
-	//		}
-	//	}
-	//	rows = append(rows,record)
-	//}
+func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, HelperError.Error) {
 
 	var rows =make([]HelperRow,0,QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
@@ -128,35 +116,35 @@ func (this SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, 
 		return nil, err
 	}
 	defer query.Close()
+	cols,err:=query.Columns()
+	if err!=nil {
+		return nil ,err
+	}
 	for{
 		row,err:= query.QueryRow();
-		if err!=nil {
-			return nil ,err
+		if err==nil {
+			rows=append(rows,row)
+			continue
 		}
-		if row == nil {
+		if err.IsEmpty() {
 			break
 		}
-		rows=append(rows,row)
+		return nil,err
 	}
-
-	return NewTable(rows,query.Columns()),nil
-
+	return NewTable(rows,cols),nil
 }
 
 
 /**
 get Querying handler
  */
-func (this SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
+func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,HelperError.Error){
 
 	rows,err := this.Connection.Query(sql,args...)
 	if err!=nil {
-		return nil,err
+		return nil,HelperError.NewParent(err)
 	}
-	querying,err:= NewQuerying(rows)
-	if err!=nil {
-		return nil ,err
-	}
+	querying:= NewQuerying(rows)
 	return querying,nil
 }
 
@@ -164,13 +152,13 @@ func (this SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
 /**
   读取一行
 */
-func (this SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, error) {
+func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, HelperError.Error) {
 
 	query,err:= this.Querying(sql,args...)
+	defer query.Close()
 	if err!=nil {
 		return nil, err
 	}
-	defer query.Close()
 	row,err:= query.QueryRow();
 	if err!=nil {
 		return nil ,err
@@ -179,55 +167,15 @@ func (this SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, error
 		return nil,nil
 	}
 	return row,nil
-
-
-	//rows,err := this.Connection.Query(sql,args...)
-	//
-	//if(err!=nil){
-	//	return nil,err
-	//}
-	//
-	//defer rows.Close()
-	//
-	//columns, _ := rows.Columns()
-	//scanArgs := make([]interface{}, len(columns))
-	//values := make([]interface{}, len(columns))
-	//for i := range values {
-	//	scanArgs[i] = &values[i]
-	//}
-	//
-	//if rows.Next() {
-	//	//将行数据保存到record字典
-	//	err = rows.Scan(scanArgs...)
-	//	record := make(HelperRow)
-	//	for i, col := range values {
-	//		if col == nil {
-	//			continue
-	//		}
-	//		switch col.(type) {
-	//
-	//			case []byte:
-	//				record[columns[i]] = string(col.([]byte))
-	//			default:
-	//				record[columns[i]] = col
-	//
-	//		}
-	//
-	//	}
-	//	return &record,nil
-	//}
-	//
-	//return nil,nil
 }
 /**
   读取个值
 */
-func (this SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error) {
+func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, HelperError.Error) {
 	
 	rows,err := this.Connection.Query(sql,args...)
 	if(err!=nil){
-		
-		return 0, err
+		return 0, HelperError.NewParent(err)
 	}
 	defer rows.Close()
 	if rows.Next() {
@@ -236,22 +184,22 @@ func (this SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error
 		return val,nil
 	}
 
-	return 0, errors.New("no found record.")
+	return 0, HelperError.NewString("no found record.")
 }
 
 
 /*
 执行sql
 */
-func (this SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
+func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,HelperError.Error){
 	stmt,err:=this.Connection.Prepare(sql)
 	if(err!=nil){
-		return nil,err
+		return nil,HelperError.NewParent(err)
 	}
 	defer stmt.Close()
-	result,exeerr := stmt.Exec(args...)
-	if(exeerr!=nil){
-		return nil,exeerr
+	result,err := stmt.Exec(args...)
+	if(err!=nil){
+		return nil,HelperError.NewParent(err)
 	}
 	return result,nil
 }
@@ -259,7 +207,7 @@ func (this SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
 /*
 执行插入sql
 */
-func (this SqlHelper) Insert(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,HelperError.Error){
 	result,err := this.Exec(sql,args...)
 	if(err!=nil){
 		return 0,err
@@ -267,14 +215,14 @@ func (this SqlHelper) Insert(sql string, args ...interface{})(int64,error){
 	
 	id,err2 := result.LastInsertId()
 	if(err2 != nil) {
-		return 0,err2
+		return 0,HelperError.NewParent(err2)
 	}
 	return id , nil
 }
 /*
 更新或删除sql
 */
-func (this SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,HelperError.Error){
 	result,err := this.Exec(sql,args...)
 	if(err!=nil){
 		return 0,err
@@ -282,7 +230,7 @@ func (this SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
 	
 	cnt,err2 := result.RowsAffected()
 	if(err2 != nil) {
-		return 0,err2
+		return 0,HelperError.NewParent(err2)
 	}
 	return cnt , nil
 }
@@ -291,7 +239,7 @@ func (this SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
 /*
     关闭连接
 */
-func (this SqlHelper) Close() error{
+func (this *SqlHelper) Close() HelperError.Error{
 	err := this.Connection.Close()
-	return err
+	return HelperError.NewParent(err)
 }
