@@ -3,7 +3,6 @@ package goSqlHelper
 import (
 	"fmt"
 	"database/sql"
-	"errors"
 	"github.com/bobby96333/goSqlHelper/HelperError"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -90,19 +89,6 @@ func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, H
 	}
 
 	return rows,nil
-}
-
-func (this *SqlHelper) QueryObject(obj interface{}, sql string,args ...interface{})(HelperError.Error) {
-	query,err:= this.Querying(sql,args...)
-	if err!=nil {
-		return err
-	}
-	defer query.Close()
-	err = query.QueryObject(obj)
-	if err!=nil {
-		return err
-	}
-	return nil
 }
 
 /**

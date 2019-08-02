@@ -7,38 +7,34 @@ import (
 
 type Querying struct {
 	rows *sql.Rows
-	cols []string
+	_cols []string
 }
 
 
 func (this *Querying) Close(){
 	this.rows.Close()
-	this.cols=nil
+	this._cols=nil
 }
 
 func (this *Querying) Columns() ([]string,HelperError.Error){
-	if this.cols==nil {
+	if this._cols==nil {
 		var err error
-		this.cols,err = this.rows.Columns()
+		this._cols,err = this.rows.Columns()
 		if err!=nil {
 			return nil,HelperError.NewParent(err)
 		}
 	}
-	return this.cols,nil
-}
-
-func (this Querying) QueryObject(object interface{}) (HelperError.Error){
-	err := this.rows.Scan(object)
-	if err!=nil {
-		return HelperError.NewParent(err)
-	}
-	return nil
+	return this._cols,nil
 }
 
 func (this Querying) QueryRow() (HelperRow,HelperError.Error){
 
-	scanArgs := make([]interface{}, len(this.cols))
-	values := make([]interface{}, len(this.cols))
+	cols,err:=this.Columns()
+	if err!=nil {
+		return nil,err
+	}
+	scanArgs := make([]interface{}, len(cols))
+	values := make([]interface{}, len(cols))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
@@ -57,9 +53,9 @@ func (this Querying) QueryRow() (HelperRow,HelperError.Error){
 			switch col.(type) {
 
 			case []byte:
-				record[this.cols[i]] = string(col.([]byte))
+				record[cols[i]] = string(col.([]byte))
 			default:
-				record[this.cols[i]] = col
+				record[cols[i]] = col
 
 			}
 		}
