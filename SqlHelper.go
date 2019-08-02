@@ -1,9 +1,9 @@
 package goSqlHelper
 
 import (
-	"fmt"
 	"database/sql"
-	"github.com/bobby96333/goSqlHelper/HelperError"
+	"errors"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -14,27 +14,28 @@ type SqlHelper struct{
 const QUERY_BUFFER_SIZE=20
 
 
-func MysqlOpen(connectionStr string) (*SqlHelper,HelperError.Error){
+func MysqlOpen(connectionStr string) (*SqlHelper,error){
 
 	sqlHelper :=new (SqlHelper)
 	err:= sqlHelper.Open(connectionStr)
 	if(err!=nil){
-		return nil ,HelperError.NewParent(err)
+		return nil ,err
 	}
 	return sqlHelper,nil
 }
 
-func New(connectionStr string) (*SqlHelper,HelperError.Error){
+func New(connectionStr string) (*SqlHelper,error){
 	return MysqlOpen(connectionStr)
 }
 
 /**
+@todo need add context,Transaction support
 begin transaction
  */
-func (this *SqlHelper) Begin()(*sql.Tx,HelperError.Error){
+func (this *SqlHelper) Begin()(*sql.Tx,error){
 	val, err:= this.Connection.Begin()
 	if err!=nil {
-		return nil, HelperError.NewParent(err)
+		return nil, err
 	}
 	return val,nil
 }
@@ -43,17 +44,17 @@ func (this *SqlHelper) Begin()(*sql.Tx,HelperError.Error){
 /**
    初始化模块
 */
-func (this *SqlHelper) Open(connectionStr string) HelperError.Error{
+func (this *SqlHelper) Open(connectionStr string) error{
 	var err error
 	
 //	sql.Open
 	this.Connection,err = sql.Open("mysql",connectionStr)
 	if(err!=nil){
-		return HelperError.NewString(fmt.Sprintf("数据库链接失败:%s",err.Error()))
+		return errors.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
 	}
 	err=this.Connection.Ping();
 	if err!=nil {
-		return HelperError.NewParent(err)
+		return err
 	}
 	return nil
 }
@@ -68,7 +69,7 @@ func (this *SqlHelper) SetDB (conn *sql.DB) {
 /**
   读取多行
 */
-func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, HelperError.Error) {
+func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, error) {
 
 	var rows =make([]HelperRow, 0, QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
@@ -82,7 +83,7 @@ func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, H
 			rows=append(rows,row)
 			continue
 		}
-		if err.IsEmpty() {
+		if err== NoFoundError {
 			break
 		}
 		return nil , err
@@ -94,7 +95,7 @@ func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, H
 /**
   读取多行
 */
-func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, HelperError.Error) {
+func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, error) {
 
 	var rows =make([]HelperRow,0,QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
@@ -112,7 +113,7 @@ func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable,
 			rows=append(rows,row)
 			continue
 		}
-		if err.IsEmpty() {
+		if err== NoFoundError {
 			break
 		}
 		return nil,err
@@ -124,11 +125,11 @@ func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable,
 /**
 get Querying handler
  */
-func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,HelperError.Error){
+func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
 
 	rows,err := this.Connection.Query(sql,args...)
 	if err!=nil {
-		return nil,HelperError.NewParent(err)
+		return nil, err
 	}
 	querying:= NewQuerying(rows)
 	return querying,nil
@@ -138,7 +139,7 @@ func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,Helper
 /**
   读取一行
 */
-func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, HelperError.Error) {
+func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, error) {
 
 	query,err:= this.Querying(sql,args...)
 	defer query.Close()
@@ -157,11 +158,11 @@ func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, Help
 /**
   读取个值
 */
-func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, HelperError.Error) {
+func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error) {
 	
 	rows,err := this.Connection.Query(sql,args...)
 	if(err!=nil){
-		return 0, HelperError.NewParent(err)
+		return 0, err
 	}
 	defer rows.Close()
 	if rows.Next() {
@@ -170,22 +171,22 @@ func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, Help
 		return val,nil
 	}
 
-	return 0, HelperError.NewString("no found record.")
+	return 0, errors.New("no found record.")
 }
 
 
 /*
 执行sql
 */
-func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,HelperError.Error){
+func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
 	stmt,err:=this.Connection.Prepare(sql)
-	if(err!=nil){
-		return nil,HelperError.NewParent(err)
+	if err!=nil {
+		return nil, err
 	}
 	defer stmt.Close()
 	result,err := stmt.Exec(args...)
 	if(err!=nil){
-		return nil,HelperError.NewParent(err)
+		return nil, err
 	}
 	return result,nil
 }
@@ -193,30 +194,30 @@ func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,HelperErr
 /*
 执行插入sql
 */
-func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,HelperError.Error){
+func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
-	if(err!=nil){
+	if err!=nil {
 		return 0,err
 	}
 	
 	id,err2 := result.LastInsertId()
-	if(err2 != nil) {
-		return 0,HelperError.NewParent(err2)
+	if err2 != nil {
+		return 0, err2
 	}
 	return id , nil
 }
 /*
 更新或删除sql
 */
-func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,HelperError.Error){
+func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
-	if(err!=nil){
+	if err!=nil {
 		return 0,err
 	}
 	
 	cnt,err2 := result.RowsAffected()
 	if(err2 != nil) {
-		return 0,HelperError.NewParent(err2)
+		return 0, err2
 	}
 	return cnt , nil
 }
@@ -225,7 +226,7 @@ func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,Helper
 /*
     关闭连接
 */
-func (this *SqlHelper) Close() HelperError.Error{
+func (this *SqlHelper) Close() error{
 	err := this.Connection.Close()
-	return HelperError.NewParent(err)
+	return err
 }

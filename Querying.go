@@ -2,7 +2,6 @@ package goSqlHelper
 
 import (
 	"database/sql"
-	"github.com/bobby96333/goSqlHelper/HelperError"
 )
 
 type Querying struct {
@@ -16,18 +15,18 @@ func (this *Querying) Close(){
 	this._cols=nil
 }
 
-func (this *Querying) Columns() ([]string,HelperError.Error){
+func (this *Querying) Columns() ([]string, error){
 	if this._cols==nil {
 		var err error
 		this._cols,err = this.rows.Columns()
 		if err!=nil {
-			return nil,HelperError.NewParent(err)
+			return nil, err
 		}
 	}
 	return this._cols,nil
 }
 
-func (this Querying) QueryRow() (HelperRow,HelperError.Error){
+func (this Querying) QueryRow() (HelperRow,error){
 
 	cols,err:=this.Columns()
 	if err!=nil {
@@ -43,7 +42,7 @@ func (this Querying) QueryRow() (HelperRow,HelperError.Error){
 
 		err := this.rows.Scan(scanArgs...)
 		if err!=nil {
-			return nil,HelperError.NewParent(err)
+			return nil,err
 		}
 		record := make(HelperRow)
 		for i, col := range values {
@@ -62,10 +61,22 @@ func (this Querying) QueryRow() (HelperRow,HelperError.Error){
 
 		return record,nil
 	}
-
-	return nil,HelperError.New(HelperError.ErrorEmpty)
-
+	return nil,NoFoundError
 }
+
+func (this Querying) Scan(vals ...interface{}) (error){
+
+	if this.rows.Next() {
+		err := this.rows.Scan(vals...)
+		if err!=nil {
+			return err
+		}
+		return nil
+	}
+	return NoFoundError
+}
+
+
 
 
 func NewQuerying(rows *sql.Rows) (*Querying){

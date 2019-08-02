@@ -2,28 +2,28 @@ package goSqlHelper
 
 import (
 	"encoding/json"
-	"github.com/bobby96333/goSqlHelper/HelperError"
+	"errors"
 	"reflect"
 	"strconv"
 )
 
 type HelperRow map[string] interface{}
 
-func (this HelperRow) ToJson() (string,HelperError.Error){
+func (this HelperRow) ToJson() (string,error){
 	bs,err := json.Marshal(this)
 	if err!=nil {
-		return "",HelperError.NewParent(err)
+		return "",err
 	}
 	return string(bs),nil
 }
 /**
 字段串获取key
 */
-func (this HelperRow) String(key string) (string,HelperError.Error){
+func (this HelperRow) String(key string) (string,error){
 	var obj interface{}
 	obj = (this)[key]
 	if obj== nil {
-		return "",HelperError.New(HelperError.ErrorEmpty)
+		return "", NoFoundError
 	}
 	var str string
 	switch obj.(type) {
@@ -40,7 +40,7 @@ func (this HelperRow) String(key string) (string,HelperError.Error){
 	case float32:
 		str= Float64ToStr(float64(obj.(float32)))
 	default:
-		return "",HelperError.NewString("don't konw type:"+reflect.TypeOf(obj).Name())
+		return "",errors.New("don't konw type:"+reflect.TypeOf(obj).Name())
 	}
 
 	//str = fmt.Sprintf("%V",obj)
@@ -53,7 +53,7 @@ func (this HelperRow) PString(key string) (string){
 	if err==nil {
 		return str
 	}
-	if  err.IsEmpty() {
+	if  err == NoFoundError {
 		return ""
 	}
 	panic(err)
@@ -63,7 +63,7 @@ func (this HelperRow) CleverString(key string) string{
 	if err == nil {
 		return str
 	}
-	if err.IsEmpty() {
+	if err == NoFoundError {
 		return ""
 	}
 	return str
@@ -75,7 +75,7 @@ func (this HelperRow) PInt(key string) int{
 	if err==nil {
 		return val
 	}
-	if err.IsEmpty() {
+	if err== NoFoundError {
 		return 0
 	}
 	panic(err)
@@ -85,7 +85,7 @@ func (this HelperRow) PInt64(key string) int64{
 	if err == nil {
 		return val
 	}
-	if(err.Code() == HelperError.ErrorEmpty){
+	if(err == NoFoundError){
 		return 0
 	}
 	panic(err)
@@ -94,12 +94,12 @@ func (this HelperRow) PInt64(key string) int64{
 /**
 	int获取key
 */
-func (this HelperRow) Int(key string) (int,HelperError.Error){
+func (this HelperRow) Int(key string) (int,error){
 	var obj interface{}
 	obj = this[key]
 
 	if obj== nil {
-		return 0, HelperError.New(HelperError.ErrorEmpty)
+		return 0, NoFoundError
 	}
 	var ret int
 	var converr error
@@ -112,10 +112,10 @@ func (this HelperRow) Int(key string) (int,HelperError.Error){
 			ret =  int(obj.(int32))
 		case int64:
 			ret = int(obj.(int64))
-		default: return 0,HelperError.NewString("convert to int error")
+		default: return 0,errors.New("convert to int error")
 	}
 	if converr!=nil {
-		return 0,HelperError.NewParent(converr)
+		return 0,converr
 	}
 	return ret,nil
 }
@@ -124,12 +124,12 @@ func (this HelperRow) Int(key string) (int,HelperError.Error){
 /**
 	int64获取key
 */
-func (this HelperRow) Int64(key string) (int64,HelperError.Error){
+func (this HelperRow) Int64(key string) (int64,error){
 	var obj interface{}
 	obj = (this)[key]
 
 	if obj== nil {
-		return 0,HelperError.New(HelperError.ErrorEmpty)
+		return 0, NoFoundError
 	}
 
 	var ret int64
@@ -144,10 +144,10 @@ func (this HelperRow) Int64(key string) (int64,HelperError.Error){
 			ret =  int64(obj.(int32))
 		case int64:
 			ret= obj.(int64)
-		default : return 0,HelperError.NewString("convert to int64 error")
+		default : return 0,errors.New("convert to int64 error")
 	}
 	if converr != nil {
-		return 0,HelperError.NewParent(converr)
+		return 0,converr
 	}
 	return ret,nil
 }
