@@ -1,6 +1,15 @@
 package goSqlHelper
 
-import "strconv"
+import (
+	"database/sql"
+)
+
+const(
+	SQL_SELECT="SELECT"
+	SQL_UPDATE="UPDATE"
+	SQL_DELETE="DELETE"
+	SQL_INSERT="INSERT"
+)
 
 func NewAutoSql(helper *SqlHelper) *AutoSql{
 	var orm=new(AutoSql)
@@ -10,6 +19,7 @@ func NewAutoSql(helper *SqlHelper) *AutoSql{
 }
 
 type AutoSql struct{
+	act string
 	sqlHelper *SqlHelper
 	fieldSql string
 	tbname string
@@ -19,9 +29,47 @@ type AutoSql struct{
 	having string
 	limit int
 	joins []string
+	set string
+	setVals []interface{}
 }
 func (this *AutoSql)Select(fieldSql string) *AutoSql{
+	this.act=SQL_SELECT
 	this.fieldSql=fieldSql
+	return this
+}
+func (this *AutoSql)Delete(tbname string) *AutoSql{
+	this.act=SQL_DELETE
+	this.tbname=tbname
+	return this
+}
+func (this *AutoSql)Set(setSql string) *AutoSql{
+	this.set=setSql
+	return this
+}
+func (this *AutoSql)SetRow(row *HelperRow) *AutoSql{
+	sql:=""
+	vals:=make([]interface{},len(*row))
+	i:=-1
+	for key,val:=range *row {
+		i++
+		if i>0{
+			sql+=","
+		}
+		sql+=key+"=?"
+		vals[i]=val
+	}
+	this.set=sql
+	this.setVals=vals
+	return this
+}
+func (this *AutoSql)Update(tbname string) *AutoSql{
+	this.act=SQL_UPDATE
+	this.tbname=tbname
+	return this
+}
+func (this *AutoSql)Insert(tbname string) *AutoSql{
+	this.act=SQL_INSERT
+	this.tbname=tbname
 	return this
 }
 func (this *AutoSql)From(tbname string) *AutoSql{
@@ -52,34 +100,15 @@ func (this *AutoSql)Limit(limit int) *AutoSql{
 	this.limit = limit
 	return this
 }
-func (this *AutoSql) GenerateSql()string{
-	field:="*"
-	if this.fieldSql != ""{
-		field=this.fieldSql
+func (this *AutoSql) GenerateSql() string{
+	switch this.act {
+	case SQL_SELECT:return this.generateSelectSql()
+	case SQL_INSERT:return this.generateInsertSql()
+	case SQL_UPDATE:return this.generateUpdateSql()
+	case SQL_DELETE:return this.generateDeleteSql()
+	default:return this.generateSelectSql()
 	}
-	sql:="SELECT "+field
-	if this.tbname!= "" {
-		sql+=" FROM "+this.tbname
-	}
-	for _,join :=range this.joins {
-		sql+=" "+join
-	}
-	if this.where!=""{
-		sql+=" WHERE "+this.where
-	}
-	if this.groupBy!=""{
-		sql+=" GROUP BY "+this.groupBy
-	}
-	if this.having!=""{
-		sql+=" HAVING "+this.having
-	}
-	if this.orderby!=""{
-		sql+=" ORDER BY "+this.orderby
-	}
-	if this.limit!=0{
-		sql+=" LIMIT "+ strconv.Itoa(this.limit)
-	}
-	return sql
+	panic("no found act:"+this.act)
 }
 
 func (this *AutoSql)  QueryRows(args ...interface{})([]HelperRow, error) {
@@ -87,7 +116,7 @@ func (this *AutoSql)  QueryRows(args ...interface{})([]HelperRow, error) {
 	return this.sqlHelper.QueryRows(sql,args...)
 }
 
-func (this *AutoSql) 	QueryTable( args ...interface{})(*HelperTable, error) {
+func (this *AutoSql) QueryTable( args ...interface{})(*HelperTable, error) {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryTable(sql,args...)
 }
@@ -110,4 +139,34 @@ func (this *AutoSql) QueryScalarInt(args ...interface{})(int, error) {
 func (this *AutoSql) QueryOrm(orm IOrm, args ...interface{})(error) {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryOrm(orm,sql,args...)
+}
+
+func (this *AutoSql) Exec(args ...interface{})(sql.Result,error){
+	sql:=this.GenerateSql()
+	if this.setVals!=nil {
+		args=append(this.setVals,args...)
+	}
+	return this.sqlHelper.Exec(sql,args...)
+}
+
+/*
+execute insert sql
+*/
+func (this *AutoSql) ExecInsert(args ...interface{})(int64,error){
+	sql:=this.GenerateSql()
+	if this.setVals!=nil {
+
+		args=append(this.setVals,args...)
+	}
+	return this.sqlHelper.ExecInsert(sql,args...)
+}
+/*
+execute update or delete sql
+*/
+func (this *AutoSql) ExecUpdateOrDel(args ...interface{})(int64,error){
+	sql:=this.GenerateSql()
+	if this.setVals!=nil {
+		args=append(this.setVals,args...)
+	}
+	return this.sqlHelper.ExecUpdateOrDel(sql,args...)
 }

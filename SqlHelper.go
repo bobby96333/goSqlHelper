@@ -12,6 +12,7 @@ type SqlHelper struct{
 	Connection *sql.DB
 	context context.Context
 	tx *sql.Tx
+	debugMod bool
 }
 
 const QUERY_BUFFER_SIZE=20
@@ -23,7 +24,6 @@ const QUERY_BUFFER_SIZE=20
 	con.Insert(obj)
 	obj.setup(conn)
 	obj.Select("id,val").Where("id=2").QueryList()
-	obj.Select("id,val").Where("id=2").QueryInt()
 	sqlHelper.Select("id,val").Where("id=2").QueryList()
 
 */
@@ -31,7 +31,7 @@ func MysqlOpen(connectionStr string) (*SqlHelper,error){
 
 	sqlHelper :=new (SqlHelper)
 	err:= sqlHelper.Open(connectionStr)
-	if(err!=nil){
+	if err!=nil {
 		return nil ,err
 	}
 	return sqlHelper,nil
@@ -62,6 +62,13 @@ func (this *SqlHelper) Begin() *SqlHelperRunner{
 }
 
 /**
+print sql and parameter at prepare exeucting
+ */
+func (this *SqlHelper) OpenDebug(){
+	this.debugMod=true
+}
+
+/**
 begin a trasnaction
 */
 func (this *SqlHelper) BeginTx(ctx context.Context, opts *sql.TxOptions) (*SqlHelperRunner,error) {
@@ -82,7 +89,7 @@ func (this *SqlHelper) Open(connectionStr string) error{
 	
 //	sql.Open
 	this.Connection,err = sql.Open("mysql",connectionStr)
-	if(err!=nil){
+	if err!=nil {
 		return errors.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
 	}
 	err=this.Connection.Ping();
@@ -99,66 +106,15 @@ func (this *SqlHelper) SetDB (conn *sql.DB) {
 		this.Connection=conn
 }
 
-/**
-  query muliti rows
-*/
-func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, error) {
-
-	var rows =make([]HelperRow, 0, QUERY_BUFFER_SIZE)
-	query,err:= this.Querying(sql,args...)
-	if err!=nil {
-		return nil, err
-	}
-	defer query.Close()
-	for{
-		row,err:= query.QueryRow();
-		if err==nil {
-			rows=append(rows,row)
-			continue
-		}
-		if err== NoFoundError {
-			break
-		}
-		return nil , err
-	}
-
-	return rows,nil
-}
-
-/**
-  read a table rows
-*/
-func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, error) {
-
-	var rows =make([]HelperRow,0,QUERY_BUFFER_SIZE)
-	query,err:= this.Querying(sql,args...)
-	if err!=nil {
-		return nil, err
-	}
-	defer query.Close()
-	cols,err:=query.Columns()
-	if err!=nil {
-		return nil ,err
-	}
-	for{
-		row,err:= query.QueryRow();
-		if err==nil {
-			rows=append(rows,row)
-			continue
-		}
-		if err== NoFoundError {
-			break
-		}
-		return nil,err
-	}
-	return NewTable(rows,cols),nil
-}
 
 /**
 get Querying handler
 */
 func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
-
+	if this.debugMod {
+		fmt.Println(sql)
+		fmt.Println(args)
+	}
 	var rows ,err = this.query(sql,args...)
 	if err!=nil {
 		return nil, err
@@ -166,30 +122,14 @@ func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error)
 	querying:= NewQuerying(rows)
 	return querying,nil
 }
-
-/**
-  read a record row
-*/
-func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, error) {
-
-	query,err:= this.Querying(sql,args...)
-	if err!=nil {
-		return nil, err
-	}
-	defer query.Close()
-	row,err:= query.QueryRow();
-	if err!=nil {
-		return nil ,err
-	}
-	if row == nil {
-		return nil,nil
-	}
-	return row,nil
-}
 /**
   read a int value
 */
 func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error) {
+	if this.debugMod {
+		fmt.Println(sql)
+		fmt.Println(args)
+	}
 	var rows ,err = this.query(sql,args...)
 	if err!=nil {
 		return 0,err
@@ -202,44 +142,22 @@ func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, erro
 	}
 	return 0, NoFoundError
 }
-/**
-  orm read data
-*/
-func (this *SqlHelper) QueryOrm(orm IOrm, sql string, args ...interface{})(error) {
-
-
-	rows,err := this.query(sql,args...)
-	if(err!=nil){
-		return err
-	}
-	defer rows.Close()
-	if !rows.Next() {
-		return  NoFoundError
-	}
-	cols,err:=rows.Columns()
-	if err!=nil {
-		return err
-	}
-	points := orm.MapFields(cols)
-	err = rows.Scan(points...)
-	if err!=nil {
-		return err
-	}
-	return nil
-}
-
 
 /*
 execute sql
 */
 func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
+	if this.debugMod {
+		fmt.Println(sql)
+		fmt.Println(args)
+	}
 	stmt,err:=this.prepare(sql)
 	if err!=nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	result,err := stmt.Exec(args...)
-	if(err!=nil){
+	if err!=nil {
 		return nil, err
 	}
 	return result,nil
@@ -248,7 +166,7 @@ func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
 /*
 execute insert sql
 */
-func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) ExecInsert(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
 	if err!=nil {
 		return 0,err
@@ -263,14 +181,14 @@ func (this *SqlHelper) Insert(sql string, args ...interface{})(int64,error){
 /*
 execute update or delete sql
 */
-func (this *SqlHelper) UpdateOrDel(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) ExecUpdateOrDel(sql string, args ...interface{})(int64,error){
 	result,err := this.Exec(sql,args...)
 	if err!=nil {
 		return 0,err
 	}
 	
 	cnt,err2 := result.RowsAffected()
-	if(err2 != nil) {
+	if err2 != nil {
 		return 0, err2
 	}
 	return cnt , nil

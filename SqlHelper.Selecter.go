@@ -1,9 +1,12 @@
 package goSqlHelper
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 
 func(this *SqlHelper) query(sql string,args ...interface{})(*sql.Rows,error){
+
 	if this.tx != nil {
 		if this.context==nil {
 			return this.tx.QueryContext(this.context,sql,args)

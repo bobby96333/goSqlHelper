@@ -85,7 +85,7 @@ func (this HelperRow) PInt64(key string) int64{
 	if err == nil {
 		return val
 	}
-	if(err == NoFoundError){
+	if err == NoFoundError {
 		return 0
 	}
 	panic(err)

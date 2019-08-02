@@ -1,4 +1,4 @@
-package demo
+package util
 
 import "github.com/bobby96333/goSqlHelper"
 

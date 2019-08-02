@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/bobby96333/goSqlHelper/demo"
+	"github.com/bobby96333/goSqlHelper/demo/util"
 )
 
 func main(){
-	helper:=demo.OpenDb()
+	helper:= util.OpenDb()
 	row,err:=helper.QueryRow("select * from tb_tb1 limit 1")
 	if err!=nil {
 		panic(err)

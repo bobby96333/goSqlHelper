@@ -39,7 +39,7 @@ func Int64ToStr(val int64) (string) {
 */
 func StrToInt32(val string) (int32 , error) {
 	int64,err:=strconv.ParseInt(val, 10, 64)
-	if(err!=nil){
+	if err!=nil {
 		return 0,err
 	}
 	return int32(int64) ,nil
