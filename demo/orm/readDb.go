@@ -14,7 +14,7 @@ func main(){
 	err:=helper.Auto().From("tb_tb1").Where("id=?").QueryOrm(&tb1,5)
 	if err!=nil {
 		panic(err)
-	}z
+	}
 
 	fmt.Printf("%+v",tb1)
 	fmt.Println("done")
