@@ -136,7 +136,7 @@ func (this *AutoSql) QueryScalarInt(args ...interface{})(int, error) {
 	return this.sqlHelper.QueryScalarInt(sql,args...)
 }
 
-func (this *AutoSql) QueryOrm(orm IOrm, args ...interface{})(error) {
+func (this *AutoSql) QueryOrm(orm IEntity, args ...interface{})(error) {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryOrm(orm,sql,args...)
 }

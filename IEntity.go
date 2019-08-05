@@ -1,6 +1,6 @@
 package goSqlHelper
 
-type IOrm interface{
+type IEntity interface{
 
 	MapFields(columns []string) []interface{}
 	PrimaryKeys()[]string

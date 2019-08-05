@@ -7,7 +7,7 @@ import (
 )
 
 type Tb1Entity struct{
-	goSqlHelper.IOrm
+	goSqlHelper.IEntity
 	Id int
 	Val sql.NullString
 }

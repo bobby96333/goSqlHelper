@@ -10,8 +10,8 @@ func main(){
 
 
 	helper:= util.OpenDb()
-	var tb1 entity.Tb1
-	err:=helper.Auto().From("tb_tb1").Where("id=?").QueryOrm(&tb1,4)
+	var tb1 entity.Tb1Entity
+	err:=helper.Auto().From("tb_tb1").Where("id=?").QueryOrm(&tb1,5)
 	if err!=nil {
 		panic(err)
 	}

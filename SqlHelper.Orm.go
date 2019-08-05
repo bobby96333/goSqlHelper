@@ -5,7 +5,7 @@ import "errors"
 /**
   orm read data
 */
-func (this *SqlHelper) QueryOrm(orm IOrm, sql string, args ...interface{})(error) {
+func (this *SqlHelper) QueryOrm(orm IEntity, sql string, args ...interface{})(error) {
 
 	rows,err := this.query(sql,args...)
 	if err!=nil {
@@ -30,7 +30,7 @@ func (this *SqlHelper) QueryOrm(orm IOrm, sql string, args ...interface{})(error
 /*
 execute insert sql
 */
-func (this *AutoSql) OrmInsert(orm IOrm)(int64,error){
+func (this *AutoSql) OrmInsert(orm IEntity)(int64,error){
 	sql:="INSERT INTO "+orm.TableName()+" SET "
 	cols:=orm.MapColumn()
 	i:=-1
@@ -49,7 +49,7 @@ func (this *AutoSql) OrmInsert(orm IOrm)(int64,error){
 	return this.sqlHelper.ExecInsert(sql,vals...)
 }
 
-func (this *AutoSql) OrmDelete(orm IOrm)(int64,error){
+func (this *AutoSql) OrmDelete(orm IEntity)(int64,error){
 	sql:="DELETE FROM "+orm.TableName()+" WHERE "
 	cols:=orm.MapColumn()
 	keys:=orm.PrimaryKeys()
@@ -68,7 +68,7 @@ func (this *AutoSql) OrmDelete(orm IOrm)(int64,error){
 	return this.sqlHelper.ExecUpdateOrDel(sql,vals...)
 }
 
-func (this *AutoSql) OrmUpdate(orm IOrm)(int64,error){
+func (this *AutoSql) OrmUpdate(orm IEntity)(int64,error){
 	sql:="UPDATE "+orm.TableName()+" SET "
 
 	cols:=orm.MapColumn()
