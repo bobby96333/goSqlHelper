@@ -3,6 +3,7 @@ package goSqlHelper
 import (
 	"encoding/json"
 	"errors"
+	"github.com/bobby96333/commonLib/stackError"
 	"reflect"
 	"strconv"
 )
@@ -40,7 +41,7 @@ func (this HelperRow) String(key string) (string,error){
 	case float32:
 		str= Float64ToStr(float64(obj.(float32)))
 	default:
-		return "",errors.New("don't konw type:"+reflect.TypeOf(obj).Name())
+		return "",stackError.New("don't konw type:"+reflect.TypeOf(obj).Name())
 	}
 
 	//str = fmt.Sprintf("%V",obj)
@@ -112,7 +113,7 @@ func (this HelperRow) Int(key string) (int,error){
 			ret =  int(obj.(int32))
 		case int64:
 			ret = int(obj.(int64))
-		default: return 0,errors.New("convert to int error")
+		default: return 0,stackError.New("convert to int error")
 	}
 	if converr!=nil {
 		return 0,converr
@@ -144,7 +145,7 @@ func (this HelperRow) Int64(key string) (int64,error){
 			ret =  int64(obj.(int32))
 		case int64:
 			ret= obj.(int64)
-		default : return 0,errors.New("convert to int64 error")
+		default : return 0,stackError.New("convert to int64 error")
 	}
 	if converr != nil {
 		return 0,converr

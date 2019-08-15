@@ -1,6 +1,8 @@
 package goSqlHelper
 
-import "errors"
+import (
+	"github.com/bobby96333/commonLib/stackError"
+)
 
 /**
   orm read data
@@ -44,7 +46,7 @@ func (this *AutoSql) OrmInsert(orm IEntity)(int64,error){
 		vals[i]=val
 	}
 	if i<0{
-		return 0,errors.New("no found insert data")
+		return 0,stackError.New("no found insert data")
 	}
 	return this.sqlHelper.ExecInsert(sql,vals...)
 }
@@ -54,7 +56,7 @@ func (this *AutoSql) OrmDelete(orm IEntity)(int64,error){
 	cols:=orm.MapColumn()
 	keys:=orm.PrimaryKeys()
 	if len(keys)<0{
-		return 0,errors.New("no found insert data")
+		return 0,stackError.New("no found insert data")
 	}
 
 	vals:=make([]interface{},len(keys))
@@ -74,7 +76,7 @@ func (this *AutoSql) OrmUpdate(orm IEntity)(int64,error){
 	cols:=orm.MapColumn()
 	keys:=orm.PrimaryKeys()
 	if len(keys)<0{
-		return 0,errors.New("no found insert data")
+		return 0,stackError.New("no found insert data")
 	}
 	vals:=make([]interface{},0,len(cols))
 

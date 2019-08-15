@@ -131,10 +131,24 @@ func (this *AutoSql) QueryRow( args ...interface{})(HelperRow, error) {
 	return this.sqlHelper.QueryRow(sql,args...)
 }
 
-func (this *AutoSql) QueryScalarInt(args ...interface{})(int, error) {
+func (this *AutoSql) QueryScalar(val interface{}, args ...interface{})(interface{}, error) {
 	sql:=this.GenerateSql()
-	return this.sqlHelper.QueryScalarInt(sql,args...)
+	err:=this.sqlHelper.QueryScalar(val,sql,args...)
+	return val,err
 }
+/**
+  read a int value
+*/
+func (this *AutoSql) QueryScalarInt(sql string, args ...interface{})(int,error) {
+	return this.QueryScalarInt(sql,args...)
+}
+/**
+  read a int value
+*/
+func (this *AutoSql) QueryScalarString(sql string, args ...interface{})(string,error) {
+	 return this.QueryScalarString(sql,args...)
+}
+
 
 func (this *AutoSql) QueryOrm(orm IEntity, args ...interface{})(error) {
 	sql:=this.GenerateSql()

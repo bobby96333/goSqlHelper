@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/bobby96333/commonLib/stackError"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -90,7 +91,7 @@ func (this *SqlHelper) Open(connectionStr string) error{
 //	sql.Open
 	this.Connection,err = sql.Open("mysql",connectionStr)
 	if err!=nil {
-		return errors.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
+		return stackError.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
 	}
 	err=this.Connection.Ping();
 	if err!=nil {
@@ -125,22 +126,37 @@ func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error)
 /**
   read a int value
 */
-func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int, error) {
+func (this *SqlHelper) QueryScalar(val interface{} , sql string, args ...interface{}) error  {
 	if this.debugMod {
 		fmt.Println(sql)
 		fmt.Println(args)
 	}
 	var rows ,err = this.query(sql,args...)
 	if err!=nil {
-		return 0,err
+		return err
 	}
 	defer rows.Close()
 	if rows.Next() {
-		var val int
-		err = rows.Scan(&val)
-		return val,nil
+		err = rows.Scan(val)
+		return nil
 	}
-	return 0, NoFoundError
+	return NoFoundError
+}
+/**
+  read a int value
+*/
+func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int,error) {
+	var val int
+	err :=this.QueryScalar(&val,sql,args...)
+	return val,err
+}
+/**
+  read a int value
+*/
+func (this *SqlHelper) QueryScalarString(sql string, args ...interface{})(string,error) {
+	var val string
+	err :=this.QueryScalar(&val,sql,args...)
+	return val,err
 }
 
 /*
