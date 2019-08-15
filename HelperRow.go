@@ -2,7 +2,6 @@ package goSqlHelper
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/bobby96333/commonLib/stackError"
 	"reflect"
 	"strconv"

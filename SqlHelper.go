@@ -3,7 +3,6 @@ package goSqlHelper
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/bobby96333/commonLib/stackError"
 	_ "github.com/go-sql-driver/mysql"
