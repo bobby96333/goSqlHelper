@@ -2,34 +2,41 @@ package goSqlHelper
 
 import (
 	"database/sql"
+	"github.com/bobby96333/commonLib/stackError"
 )
 
 
-func(this *SqlHelper) query(sql string,args ...interface{})(*sql.Rows,error){
+func(this *SqlHelper) query(sqlStr string,args ...interface{})(*sql.Rows,stackError.StackError){
 
+	var err error
+	var rows *sql.Rows
 	if this.tx != nil {
 		if this.context==nil {
-			return this.tx.QueryContext(this.context,sql,args)
+			rows,err = this.tx.QueryContext(this.context,sqlStr,args)
 		}else{
-			return this.tx.Query(sql,args)
+			rows,err = this.tx.Query(sqlStr,args)
 		}
 	}else if this.context != nil {
-		return this.Connection.QueryContext(this.context,sql,args)
+		rows,err = this.Connection.QueryContext(this.context,sqlStr,args)
 	}else{
-		return this.Connection.Query(sql,args...)
+		rows,err = this.Connection.Query(sqlStr,args...)
 	}
+	return rows,stackError.NewFromError(err,this.stckErrorPowerId)
 }
 
-func(this *SqlHelper) prepare(sql string) (*sql.Stmt, error){
+func(this *SqlHelper) prepare(sqlStr string) (*sql.Stmt, stackError.StackError){
+	var smt *sql.Stmt
+	var err error
 	if this.tx != nil {
 		if this.context==nil {
-			return this.tx.PrepareContext(this.context,sql)
+			smt,err = this.tx.PrepareContext(this.context,sqlStr)
 		}else{
-			return this.tx.Prepare(sql)
+			smt,err = this.tx.Prepare(sqlStr)
 		}
 	}else if this.context != nil {
-		return this.Connection.PrepareContext(this.context,sql)
+		smt,err = this.Connection.PrepareContext(this.context,sqlStr)
 	}else{
-		return this.Connection.Prepare(sql)
+		smt,err = this.Connection.Prepare(sqlStr)
 	}
+	return smt,stackError.NewFromError(err,this.stckErrorPowerId)
 }

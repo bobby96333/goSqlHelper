@@ -1,15 +1,13 @@
 package entity
 
 import (
-	"database/sql"
-	"github.com/bobby96333/goSqlHelper"
+	"github.com/bobby96333/commonLib/sqlTypes"
 	"strings"
 )
 
 type Tb1Entity struct{
-	goSqlHelper.IEntity
 	Id int
-	Val sql.NullString
+	Val sqlTypes.NullString
 }
 
 func(this *Tb1Entity) MapFields(columns []string) []interface{}{
@@ -30,10 +28,11 @@ func(this *Tb1Entity) MapFields(columns []string) []interface{}{
 }
 func(this *Tb1Entity) MapColumn() map[string]interface{}{
 
-	ret:=make(map[string]interface{})
-	ret["id"]=this.Id
-	ret["val"]=this.Val
-	return ret
+	return map[string]interface{}{
+		"id":&this.Id,
+		"val":&this.Val,
+	}
+
 }
 func(this *Tb1Entity) PrimaryKeys() []string{
 	return []string{"id"}

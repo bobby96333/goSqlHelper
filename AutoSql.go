@@ -2,6 +2,7 @@ package goSqlHelper
 
 import (
 	"database/sql"
+	"github.com/bobby96333/commonLib/stackError"
 )
 
 const(
@@ -111,27 +112,27 @@ func (this *AutoSql) GenerateSql() string{
 	panic("no found act:"+this.act)
 }
 
-func (this *AutoSql)  QueryRows(args ...interface{})([]HelperRow, error) {
+func (this *AutoSql)  QueryRows(args ...interface{})([]HelperRow, stackError.StackError) {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryRows(sql,args...)
 }
 
-func (this *AutoSql) QueryTable( args ...interface{})(*HelperTable, error) {
+func (this *AutoSql) QueryTable( args ...interface{})(*HelperTable, stackError.StackError) {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryTable(sql,args...)
 }
 
-func (this *AutoSql) Querying(args ...interface{})(*Querying,error){
+func (this *AutoSql) Querying(args ...interface{})(*Querying,stackError.StackError){
 	sql:=this.GenerateSql()
 	return this.sqlHelper.Querying(sql,args...)
 }
 
-func (this *AutoSql) QueryRow( args ...interface{})(HelperRow, error) {
+func (this *AutoSql) QueryRow( args ...interface{})(HelperRow, stackError.StackError) {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryRow(sql,args...)
 }
 
-func (this *AutoSql) QueryScalar(val interface{}, args ...interface{})(interface{}, error) {
+func (this *AutoSql) QueryScalar(val interface{}, args ...interface{})(interface{}, stackError.StackError) {
 	sql:=this.GenerateSql()
 	err:=this.sqlHelper.QueryScalar(val,sql,args...)
 	return val,err
@@ -139,23 +140,23 @@ func (this *AutoSql) QueryScalar(val interface{}, args ...interface{})(interface
 /**
   read a int value
 */
-func (this *AutoSql) QueryScalarInt(sql string, args ...interface{})(int,error) {
+func (this *AutoSql) QueryScalarInt(sql string, args ...interface{})(int,stackError.StackError) {
 	return this.QueryScalarInt(sql,args...)
 }
 /**
   read a int value
 */
-func (this *AutoSql) QueryScalarString(sql string, args ...interface{})(string,error) {
+func (this *AutoSql) QueryScalarString(sql string, args ...interface{})(string,stackError.StackError) {
 	 return this.QueryScalarString(sql,args...)
 }
 
 
-func (this *AutoSql) QueryOrm(orm IEntity, args ...interface{})(error) {
+func (this *AutoSql) QueryOrm(orm IEntity, args ...interface{}) stackError.StackError {
 	sql:=this.GenerateSql()
 	return this.sqlHelper.QueryOrm(orm,sql,args...)
 }
 
-func (this *AutoSql) Exec(args ...interface{})(sql.Result,error){
+func (this *AutoSql) Exec(args ...interface{})(sql.Result,stackError.StackError){
 	sql:=this.GenerateSql()
 	if this.setVals!=nil {
 		args=append(this.setVals,args...)
@@ -166,7 +167,7 @@ func (this *AutoSql) Exec(args ...interface{})(sql.Result,error){
 /*
 execute insert sql
 */
-func (this *AutoSql) ExecInsert(args ...interface{})(int64,error){
+func (this *AutoSql) ExecInsert(args ...interface{})(int64,stackError.StackError){
 	sql:=this.GenerateSql()
 	if this.setVals!=nil {
 
@@ -177,7 +178,7 @@ func (this *AutoSql) ExecInsert(args ...interface{})(int64,error){
 /*
 execute update or delete sql
 */
-func (this *AutoSql) ExecUpdateOrDel(args ...interface{})(int64,error){
+func (this *AutoSql) ExecUpdateOrDel(args ...interface{})(int64,stackError.StackError){
 	sql:=this.GenerateSql()
 	if this.setVals!=nil {
 		args=append(this.setVals,args...)

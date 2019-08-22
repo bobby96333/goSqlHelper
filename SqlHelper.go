@@ -13,6 +13,7 @@ type SqlHelper struct{
 	context context.Context
 	tx *sql.Tx
 	debugMod bool
+	stckErrorPowerId int
 }
 
 const QUERY_BUFFER_SIZE=20
@@ -27,18 +28,40 @@ const QUERY_BUFFER_SIZE=20
 	sqlHelper.Select("id,val").Where("id=2").QueryList()
 
 */
-func MysqlOpen(connectionStr string) (*SqlHelper,error){
+func MysqlOpen(connectionStr string) (*SqlHelper,stackError.StackError){
 
 	sqlHelper :=new (SqlHelper)
-	err:= sqlHelper.Open(connectionStr)
+	err:= sqlHelper.Init("mysql",connectionStr)
 	if err!=nil {
-		return nil ,err
+		return nil ,stackError.NewFromError(err,-1)
 	}
 	return sqlHelper,nil
 }
 
-func New(connectionStr string) (*SqlHelper,error){
+func New(connectionStr string) (*SqlHelper,stackError.StackError){
 	return MysqlOpen(connectionStr)
+}
+/**
+  open db
+*/
+func (this *SqlHelper) Init(driver,connectionStr string) stackError.StackError{
+	if DefaultDebugModel {
+		this.OpenDebug()
+	}else{
+		this.stckErrorPowerId = -1
+	}
+
+	var err error
+	//	sql.Open
+	this.Connection,err = sql.Open(driver,connectionStr)
+	if err!=nil {
+		return stackError.New(fmt.Sprintf("db connected failed:%s",err.Error()),this.stckErrorPowerId)
+	}
+	err=this.Connection.Ping();
+	if err!=nil {
+		return stackError.NewFromError( err,this.stckErrorPowerId)
+	}
+	return nil
 }
 
 /**
@@ -66,38 +89,23 @@ print sql and parameter at prepare exeucting
  */
 func (this *SqlHelper) OpenDebug(){
 	this.debugMod=true
+	this.stckErrorPowerId=stackError.GetPowerKey()
+	stackError.SetPower(true,this.stckErrorPowerId)
 }
 
 /**
 begin a trasnaction
 */
-func (this *SqlHelper) BeginTx(ctx context.Context, opts *sql.TxOptions) (*SqlHelperRunner,error) {
+func (this *SqlHelper) BeginTx(ctx context.Context, opts *sql.TxOptions) (*SqlHelperRunner,stackError.StackError) {
 	runner :=new(SqlHelperRunner)
 	runner.SetDB(this.Connection)
 	err:= runner.BeginTx(ctx,opts)
 	if err!=nil {
-		return nil,err
+		return nil,stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	return runner,nil
 }
 
-/**
-   open db
-*/
-func (this *SqlHelper) Open(connectionStr string) error{
-	var err error
-	
-//	sql.Open
-	this.Connection,err = sql.Open("mysql",connectionStr)
-	if err!=nil {
-		return stackError.New(fmt.Sprintf("数据库链接失败:%s",err.Error()))
-	}
-	err=this.Connection.Ping();
-	if err!=nil {
-		return err
-	}
-	return nil
-}
 
 /**
 set db object
@@ -110,49 +118,50 @@ func (this *SqlHelper) SetDB (conn *sql.DB) {
 /**
 get Querying handler
 */
-func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,error){
+func (this *SqlHelper) Querying(sql string,args ...interface{})(*Querying,stackError.StackError){
 	if this.debugMod {
 		fmt.Println(sql)
 		fmt.Println(args)
 	}
 	var rows ,err = this.query(sql,args...)
 	if err!=nil {
-		return nil, err
+		return nil, stackError.NewFromError(err,this.stckErrorPowerId)
 	}
-	querying:= NewQuerying(rows)
+	querying:= NewQuerying(rows,this.stckErrorPowerId)
 	return querying,nil
 }
 /**
   read a int value
 */
-func (this *SqlHelper) QueryScalar(val interface{} , sql string, args ...interface{}) error  {
+func (this *SqlHelper) QueryScalar(val interface{} , sql string, args ...interface{}) stackError.StackError  {
 	if this.debugMod {
 		fmt.Println(sql)
 		fmt.Println(args)
 	}
-	var rows ,err = this.query(sql,args...)
+	var err error
+	rows ,err := this.query(sql,args...)
 	if err!=nil {
-		return err
+		return stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	defer rows.Close()
 	if rows.Next() {
 		err = rows.Scan(val)
-		return nil
+		return stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	return NoFoundError
 }
 /**
   read a int value
 */
-func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int,error) {
+func (this *SqlHelper) QueryScalarInt(sql string, args ...interface{})(int,stackError.StackError) {
 	var val int
 	err :=this.QueryScalar(&val,sql,args...)
-	return val,err
+	return val, err
 }
 /**
   read a int value
 */
-func (this *SqlHelper) QueryScalarString(sql string, args ...interface{})(string,error) {
+func (this *SqlHelper) QueryScalarString(sql string, args ...interface{})(string,stackError.StackError) {
 	var val string
 	err :=this.QueryScalar(&val,sql,args...)
 	return val,err
@@ -161,19 +170,20 @@ func (this *SqlHelper) QueryScalarString(sql string, args ...interface{})(string
 /*
 execute sql
 */
-func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
+func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,stackError.StackError){
 	if this.debugMod {
 		fmt.Println(sql)
 		fmt.Println(args)
 	}
+	var err error
 	stmt,err:=this.prepare(sql)
 	if err!=nil {
-		return nil, err
+		return nil, stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	defer stmt.Close()
 	result,err := stmt.Exec(args...)
 	if err!=nil {
-		return nil, err
+		return nil, stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	return result,nil
 }
@@ -181,7 +191,7 @@ func (this *SqlHelper) Exec(sql string,args ...interface{})(sql.Result,error){
 /*
 execute insert sql
 */
-func (this *SqlHelper) ExecInsert(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) ExecInsert(sql string, args ...interface{})(int64,stackError.StackError){
 	result,err := this.Exec(sql,args...)
 	if err!=nil {
 		return 0,err
@@ -189,14 +199,14 @@ func (this *SqlHelper) ExecInsert(sql string, args ...interface{})(int64,error){
 	
 	id,err2 := result.LastInsertId()
 	if err2 != nil {
-		return 0, err2
+		return 0, stackError.NewFromError(err2,this.stckErrorPowerId)
 	}
 	return id , nil
 }
 /*
 execute update or delete sql
 */
-func (this *SqlHelper) ExecUpdateOrDel(sql string, args ...interface{})(int64,error){
+func (this *SqlHelper) ExecUpdateOrDel(sql string, args ...interface{})(int64,stackError.StackError){
 	result,err := this.Exec(sql,args...)
 	if err!=nil {
 		return 0,err
@@ -204,7 +214,7 @@ func (this *SqlHelper) ExecUpdateOrDel(sql string, args ...interface{})(int64,er
 	
 	cnt,err2 := result.RowsAffected()
 	if err2 != nil {
-		return 0, err2
+		return 0, stackError.NewFromError(err2,this.stckErrorPowerId)
 	}
 	return cnt , nil
 }
@@ -213,9 +223,9 @@ func (this *SqlHelper) ExecUpdateOrDel(sql string, args ...interface{})(int64,er
 /*
     close db pool
 */
-func (this *SqlHelper) Close() error{
+func (this *SqlHelper) Close() stackError.StackError{
 	err := this.Connection.Close()
-	return err
+	return stackError.NewFromError(err,this.stckErrorPowerId)
 }
 
 // get auto sql

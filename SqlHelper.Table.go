@@ -1,9 +1,11 @@
 package goSqlHelper
 
+import "github.com/bobby96333/commonLib/stackError"
+
 /**
   read a record row
 */
-func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, error) {
+func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, stackError.StackError) {
 
 	query,err:= this.Querying(sql,args...)
 	if err!=nil {
@@ -23,7 +25,7 @@ func (this *SqlHelper) QueryRow(sql string, args ...interface{})(HelperRow, erro
 /**
   read a table rows
 */
-func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, error) {
+func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable, stackError.StackError) {
 
 	var rows =make([]HelperRow,0,QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
@@ -52,7 +54,7 @@ func (this *SqlHelper) QueryTable(sql string, args ...interface{})(*HelperTable,
 /**
   query muliti rows
 */
-func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, error) {
+func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, stackError.StackError) {
 
 	var rows =make([]HelperRow, 0, QUERY_BUFFER_SIZE)
 	query,err:= this.Querying(sql,args...)
@@ -69,11 +71,62 @@ func (this *SqlHelper) QueryRows(sql string, args ...interface{})([]HelperRow, e
 		if err== NoFoundError {
 			break
 		}
-		return nil , err
+		return nil , stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 
 	return rows,nil
 }
+/**
+  query muliti string
+*/
+func (this *SqlHelper) QueryStrings(sql string, args ...interface{})([]string, stackError.StackError) {
+
+	var vals =make([]string, 0, QUERY_BUFFER_SIZE)
+	query,err:= this.Querying(sql,args...)
+	if err!=nil {
+		return nil, err
+	}
+	defer query.Close()
+	for {
+		var str string
+		err:= query.Scan(&str)
+		if err==nil {
+			vals=append(vals,str)
+			continue
+		}
+		if err== NoFoundError {
+			break
+		}
+		return nil , err
+	}
+	return vals,nil
+}
+/**
+  query muliti int
+*/
+func (this *SqlHelper) QueryInt(sql string, args ...interface{})([]int, stackError.StackError) {
+
+	var vals =make([]int, 0, QUERY_BUFFER_SIZE)
+	query,err:= this.Querying(sql,args...)
+	if err!=nil {
+		return nil, err
+	}
+	defer query.Close()
+	for {
+		var val int
+		err:= query.Scan(&val)
+		if err==nil {
+			vals=append(vals,val)
+			continue
+		}
+		if err== NoFoundError {
+			break
+		}
+		return nil , err
+	}
+	return vals,nil
+}
+
 //
 //func (this *SqlHelper) InsertRow(tbname string,row *HelperRow)(int64,error){
 //	sql:="INSERT INTO "+tbname+" SET "

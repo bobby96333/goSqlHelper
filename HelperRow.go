@@ -9,17 +9,17 @@ import (
 
 type HelperRow map[string] interface{}
 
-func (this HelperRow) ToJson() (string,error){
+func (this HelperRow) ToJson() (string,stackError.StackError){
 	bs,err := json.Marshal(this)
 	if err!=nil {
-		return "",err
+		return "", stackError.NewFromError(err,-1)
 	}
 	return string(bs),nil
 }
 /**
 字段串获取key
 */
-func (this HelperRow) String(key string) (string,error){
+func (this HelperRow) String(key string) (string,stackError.StackError){
 	var obj interface{}
 	obj = (this)[key]
 	if obj== nil {
@@ -40,7 +40,7 @@ func (this HelperRow) String(key string) (string,error){
 	case float32:
 		str= Float64ToStr(float64(obj.(float32)))
 	default:
-		return "",stackError.New("don't konw type:"+reflect.TypeOf(obj).Name())
+		return "",stackError.New("don't konw type:"+reflect.TypeOf(obj).Name(),-1)
 	}
 
 	//str = fmt.Sprintf("%V",obj)
@@ -94,7 +94,7 @@ func (this HelperRow) PInt64(key string) int64{
 /**
 	int获取key
 */
-func (this HelperRow) Int(key string) (int,error){
+func (this HelperRow) Int(key string) (int,stackError.StackError){
 	var obj interface{}
 	obj = this[key]
 
@@ -112,10 +112,10 @@ func (this HelperRow) Int(key string) (int,error){
 			ret =  int(obj.(int32))
 		case int64:
 			ret = int(obj.(int64))
-		default: return 0,stackError.New("convert to int error")
+		default: return 0,stackError.New("convert to int error",-1)
 	}
 	if converr!=nil {
-		return 0,converr
+		return 0, stackError.NewFromError(converr,-1)
 	}
 	return ret,nil
 }
@@ -124,7 +124,7 @@ func (this HelperRow) Int(key string) (int,error){
 /**
 	int64获取key
 */
-func (this HelperRow) Int64(key string) (int64,error){
+func (this HelperRow) Int64(key string) (int64,stackError.StackError){
 	var obj interface{}
 	obj = (this)[key]
 
@@ -144,10 +144,10 @@ func (this HelperRow) Int64(key string) (int64,error){
 			ret =  int64(obj.(int32))
 		case int64:
 			ret= obj.(int64)
-		default : return 0,stackError.New("convert to int64 error")
+		default : return 0,stackError.New("convert to int64 error",-1)
 	}
 	if converr != nil {
-		return 0,converr
+		return 0,stackError.NewFromError(converr,-1)
 	}
 	return ret,nil
 }

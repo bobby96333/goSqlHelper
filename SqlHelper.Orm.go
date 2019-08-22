@@ -7,11 +7,12 @@ import (
 /**
   orm read data
 */
-func (this *SqlHelper) QueryOrm(orm IEntity, sql string, args ...interface{})(error) {
+func (this *SqlHelper) QueryOrm(orm IEntity, sql string, args ...interface{})(stackError.StackError) {
 
+	var err error
 	rows,err := this.query(sql,args...)
 	if err!=nil {
-		return err
+		return stackError.NewFromError( err,this.stckErrorPowerId)
 	}
 	defer rows.Close()
 	if !rows.Next() {
@@ -19,12 +20,12 @@ func (this *SqlHelper) QueryOrm(orm IEntity, sql string, args ...interface{})(er
 	}
 	cols,err:=rows.Columns()
 	if err!=nil {
-		return err
+		return stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	points := orm.MapFields(cols)
 	err = rows.Scan(points...)
 	if err!=nil {
-		return err
+		return stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	return nil
 }
@@ -32,7 +33,7 @@ func (this *SqlHelper) QueryOrm(orm IEntity, sql string, args ...interface{})(er
 /*
 execute insert sql
 */
-func (this *AutoSql) OrmInsert(orm IEntity)(int64,error){
+func (this *SqlHelper) OrmInsert(orm IEntity)(int64,stackError.StackError){
 	sql:="INSERT INTO "+orm.TableName()+" SET "
 	cols:=orm.MapColumn()
 	i:=-1
@@ -46,17 +47,17 @@ func (this *AutoSql) OrmInsert(orm IEntity)(int64,error){
 		vals[i]=val
 	}
 	if i<0{
-		return 0,stackError.New("no found insert data")
+		return 0,stackError.New("no found insert data",this.stckErrorPowerId)
 	}
-	return this.sqlHelper.ExecInsert(sql,vals...)
+	return this.ExecInsert(sql,vals...)
 }
 
-func (this *AutoSql) OrmDelete(orm IEntity)(int64,error){
+func (this *SqlHelper) OrmDelete(orm IEntity)(int64,error){
 	sql:="DELETE FROM "+orm.TableName()+" WHERE "
 	cols:=orm.MapColumn()
 	keys:=orm.PrimaryKeys()
 	if len(keys)<0{
-		return 0,stackError.New("no found insert data")
+		return 0,stackError.New("no found insert data",this.stckErrorPowerId)
 	}
 
 	vals:=make([]interface{},len(keys))
@@ -67,16 +68,16 @@ func (this *AutoSql) OrmDelete(orm IEntity)(int64,error){
 		sql+=key+"=?"
 		vals[i]=cols[key]
 	}
-	return this.sqlHelper.ExecUpdateOrDel(sql,vals...)
+	return this.ExecUpdateOrDel(sql,vals...)
 }
 
-func (this *AutoSql) OrmUpdate(orm IEntity)(int64,error){
+func (this *SqlHelper) OrmUpdate(orm IEntity)(int64,stackError.StackError){
 	sql:="UPDATE "+orm.TableName()+" SET "
 
 	cols:=orm.MapColumn()
 	keys:=orm.PrimaryKeys()
 	if len(keys)<0{
-		return 0,stackError.New("no found insert data")
+		return 0,stackError.New("no found insert data",this.stckErrorPowerId)
 	}
 	vals:=make([]interface{},0,len(cols))
 
@@ -107,5 +108,5 @@ func (this *AutoSql) OrmUpdate(orm IEntity)(int64,error){
 		sql+=key+"=?"
 		vals=append(vals,cols[key])
 	}
-	return this.sqlHelper.ExecUpdateOrDel(sql,vals...)
+	return this.ExecUpdateOrDel(sql,vals...)
 }

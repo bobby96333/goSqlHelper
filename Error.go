@@ -1,5 +1,6 @@
 package goSqlHelper
 
-import "errors"
+import "github.com/bobby96333/commonLib/stackError"
 
-var NoFoundError = errors.New("no found data")
+
+var NoFoundError = stackError.NewType("no found data")
