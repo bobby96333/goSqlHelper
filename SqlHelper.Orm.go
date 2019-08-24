@@ -22,9 +22,17 @@ func (this *SqlHelper) QueryOrm(orm IEntity, sql string, args ...interface{})(st
 	if err!=nil {
 		return stackError.NewFromError(err,this.stckErrorPowerId)
 	}
-	points := orm.MapFields(cols)
-	err = rows.Scan(points...)
+	vals := orm.MapFields(cols)
+	for i,val :=range vals {
+		if val == nil {
+			var empty interface{}
+			vals[i]= &empty
+		}
+	}
+	err = rows.Scan(vals...)
+
 	if err!=nil {
+
 		return stackError.NewFromError(err,this.stckErrorPowerId)
 	}
 	return nil

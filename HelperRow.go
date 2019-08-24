@@ -48,7 +48,7 @@ func (this HelperRow) String(key string) (string,stackError.StackError){
 }
 
 
-func (this HelperRow) PString(key string) (string){
+func (this HelperRow) MustString(key string) (string){
 	str,err:=this.String(key)
 	if err==nil {
 		return str
@@ -70,7 +70,7 @@ func (this HelperRow) CleverString(key string) string{
 }
 
 
-func (this HelperRow) PInt(key string) int{
+func (this HelperRow) MustInt(key string) int{
 	val,err:=this.Int(key)
 	if err==nil {
 		return val
@@ -80,7 +80,8 @@ func (this HelperRow) PInt(key string) int{
 	}
 	panic(err)
 }
-func (this HelperRow) PInt64(key string) int64{
+
+func (this HelperRow) MustInt64(key string) int64{
 	val,err:=this.Int64(key)
 	if err == nil {
 		return val

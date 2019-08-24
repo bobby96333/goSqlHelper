@@ -91,6 +91,7 @@ func (this *SqlHelper) OpenDebug(){
 	this.debugMod=true
 	this.stckErrorPowerId=stackError.GetPowerKey()
 	stackError.SetPower(true,this.stckErrorPowerId)
+
 }
 
 /**
